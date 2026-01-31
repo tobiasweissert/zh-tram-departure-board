@@ -9,14 +9,15 @@ void initBattery() {
 void updateBatteryState(BatteryState& state) {
   long sum = 0;
   for (int i = 0; i < 16; i++) {
-    sum += analogRead(BATTERY_ADC_PIN);
+    sum += analogReadMilliVolts(BATTERY_ADC_PIN);
     delay(1);
   }
-  int avgReading = sum / 16;
+  int avgMilliVolts = sum / 16;
 
-  float voltage = (avgReading / 4095.0) * 3.3 * 2.0;
+  // Multiply by 2 because of voltage divider
+  float voltage = (avgMilliVolts / 1000.0) * 2.0;
 
-  state.rawAdc = avgReading;
+  state.rawAdc = avgMilliVolts;
   state.voltage = voltage;
 
   if (voltage > 4.2) voltage = 4.2;

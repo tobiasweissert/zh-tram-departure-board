@@ -2,8 +2,8 @@
 #include "Config.h"
 #include <Arduino.h>
 #include <esp_sleep.h>
-#include <driver/rtc_io.h>
 #include <driver/gpio.h>
+#include <driver/rtc_io.h>
 #include <esp_chip_info.h>
 
 void displayOff(Adafruit_SSD1306& display) {
@@ -19,11 +19,17 @@ void displayOn(Adafruit_SSD1306& display) {
 void enterDeepSleep() {
   gpio_num_t btn = (gpio_num_t)BUTTON_PIN;
 
-  // Hold GPIO state during deep sleep
-  gpio_hold_en(btn);
+  // Keep RTC peripherals powered during deep sleep for internal pull-ups to work
+  esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_PERIPH, ESP_PD_OPTION_ON);
 
-  // Configure EXT1 wakeup - wake on HIGH (switch open)
-  esp_sleep_enable_ext1_wakeup_io(1ULL << btn, ESP_EXT1_WAKEUP_ANY_HIGH);
+  // Initialize GPIO as RTC IO with pull-up enabled
+  rtc_gpio_init(btn);
+  rtc_gpio_set_direction(btn, RTC_GPIO_MODE_INPUT_ONLY);
+  rtc_gpio_pullup_en(btn);
+  rtc_gpio_pulldown_dis(btn);
+
+  // Enable deep sleep GPIO wakeup - wake when GPIO goes HIGH (switch open)
+  esp_deep_sleep_enable_gpio_wakeup(1ULL << btn, ESP_GPIO_WAKEUP_GPIO_HIGH);
 
   esp_deep_sleep_start();
 }

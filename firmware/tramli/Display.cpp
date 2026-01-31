@@ -27,19 +27,27 @@ void displayDepartures(Adafruit_SSD1306& display,
 
   int timeX = SCREEN_WIDTH - w;
 
-  // Debug: show voltage instead of battery icon
-  char voltStr[8];
-  snprintf(voltStr, sizeof(voltStr), "%.2fV", batteryState.voltage);
-  display.getTextBounds(voltStr, 0, 0, &x1, &y1, &w, &h);
-  int voltX = timeX - w - 2;
-  display.setCursor(voltX, 0);
-  display.print(voltStr);
+  // Battery icon (8x5 pixels)
+  int batteryX = timeX - 10;
+  const unsigned char* batteryIcon;
+  if (batteryState.percentage >= 87) {
+    batteryIcon = batteryFullIcon;
+  } else if (batteryState.percentage >= 62) {
+    batteryIcon = battery75Icon;
+  } else if (batteryState.percentage >= 37) {
+    batteryIcon = battery50Icon;
+  } else if (batteryState.percentage >= 12) {
+    batteryIcon = battery25Icon;
+  } else {
+    batteryIcon = batteryEmptyIcon;
+  }
+  display.drawBitmap(batteryX, 1, batteryIcon, 8, 5, SSD1306_WHITE);
 
   display.setCursor(timeX, 0);
   display.print(timeStr);
 
   if (offlineMode) {
-    display.setCursor(voltX - 8, 0);
+    display.setCursor(batteryX - 8, 0);
     display.print("!");
   }
 
@@ -93,7 +101,7 @@ void displayDepartures(Adafruit_SSD1306& display,
       if (minutesUntil <= 0) {
         display.setCursor(SCREEN_WIDTH - 26, yPos);
         display.print("-");
-        display.drawBitmap(SCREEN_WIDTH - 9, yPos, busFrontIcon, 8, 8, SSD1306_WHITE);
+        display.drawBitmap(SCREEN_WIDTH - 10, yPos, busFrontIcon, 8, 8, SSD1306_WHITE);
       } else if (minutesUntil < 5) {
         String minStr = String(minutesUntil);
         display.getTextBounds(minStr, 0, 0, &x1, &y1, &w, &h);

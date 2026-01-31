@@ -26,7 +26,7 @@ STATION_CITY = "Zürich"
 TRAM_7_ROUTE = "7"
 BUS_72_ROUTE = "72"
 EXCLUDE_DESTINATION = "Wollishoferplatz"
-OUTPUT_FILE = "ScheduleData.h"
+OUTPUT_FILE = "../firmware/tramli/ScheduleData.h"
 
 def download_gtfs(url, output_path="gtfs.zip"):
     """Download GTFS feed from URL."""

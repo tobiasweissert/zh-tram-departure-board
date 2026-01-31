@@ -1,0 +1,9 @@
+{
+  "cpu": {
+    "fqbn": "esp32:esp32:esp32c6",
+    "name": "ESP32-C6",
+    "type": "esp32c6"
+  },
+  "secrets": [],
+  "included_libs": []
+}
