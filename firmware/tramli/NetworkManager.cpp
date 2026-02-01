@@ -2,6 +2,7 @@
 #include "Config.h"
 #include "Utils.h"
 #include <WiFi.h>
+#include <esp_wifi.h>
 #include <HTTPClient.h>
 #include <ArduinoJson.h>
 
@@ -22,6 +23,9 @@ bool connectWiFi() {
     attempts++;
   }
 
+  if (WiFi.status() == WL_CONNECTED) {
+    esp_wifi_set_ps(WIFI_PS_MIN_MODEM);  // Enable modem sleep for power savings
+  }
   return (WiFi.status() == WL_CONNECTED);
 }
 

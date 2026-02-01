@@ -115,10 +115,17 @@ void setup() {
     // Use configTzTime which sets TZ and syncs NTP together
     configTzTime("CET-1CEST,M3.5.0,M10.5.0/3", "pool.ntp.org");
 
+    // Wait for NTP sync - check if time jumps significantly or SNTP reports synced
+    time_t timeBeforeSync = time(nullptr);
     int attempts = 0;
-    while (time(nullptr) < 100000 && attempts < 20) {
+    while (attempts < 20) {
       delay(500);
       attempts++;
+      time_t currentTime = time(nullptr);
+      // If time jumped by more than 10 seconds, NTP has synced
+      if (abs(currentTime - timeBeforeSync) > 10) {
+        break;
+      }
     }
 
     if (fetchDepartures(tram7Departures, tram7Count, bus72Departures, bus72Count)) {
