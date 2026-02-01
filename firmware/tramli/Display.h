@@ -12,4 +12,9 @@ void displayDepartures(Adafruit_SSD1306& display,
                       bool offlineMode,
                       const BatteryState& batteryState);
 
+// Partial update functions for power efficiency
+bool updateBatteryIcon(Adafruit_SSD1306& display, const BatteryState& batteryState);
+bool updateTimeDisplay(Adafruit_SSD1306& display);
+void resetDisplayCache();
+
 #endif

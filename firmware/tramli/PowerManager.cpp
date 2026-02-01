@@ -34,12 +34,10 @@ void enterDeepSleep() {
   esp_deep_sleep_start();
 }
 
-extern RTC_DATA_ATTR uint32_t bootCount;
 extern RTC_DATA_ATTR time_t rtcLastTimestamp;
 extern RTC_DATA_ATTR bool rtcShowBus72;
 
 void saveStateBeforeSleep(bool currentShowBus72) {
-  bootCount++;
   rtcLastTimestamp = time(nullptr);
   rtcShowBus72 = currentShowBus72;
 }

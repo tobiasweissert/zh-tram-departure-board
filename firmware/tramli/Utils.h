@@ -5,8 +5,8 @@
 #include <time.h>
 
 unsigned long getCurrentTimestamp();
-String getCurrentTimeString();
-String convertUmlauts(String text);
+void getCurrentTimeString(char* buffer, size_t bufferSize);
+void convertUmlauts(char* text, size_t bufferSize);
 
 void initNVS();
 void saveTimeToNVS(time_t timestamp);

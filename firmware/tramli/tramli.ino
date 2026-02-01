@@ -1,8 +1,6 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 #include <WiFi.h>
-#include <HTTPClient.h>
-#include <ArduinoJson.h>
 #include <time.h>
 #include <SPI.h>
 #include <driver/gpio.h>
@@ -17,8 +15,7 @@
 #include "OfflineSchedule.h"
 #include "PowerManager.h"
 
-// RTC Memory Variables (persist across light sleep)
-RTC_DATA_ATTR uint32_t bootCount = 0;
+// RTC Memory Variables (persist across deep sleep)
 RTC_DATA_ATTR time_t rtcLastTimestamp = 0;
 RTC_DATA_ATTR bool rtcShowBus72 = true;
 RTC_DATA_ATTR bool rtcDisplayDisabled = false;
@@ -38,14 +35,21 @@ unsigned long lastToggle = 0;
 unsigned long lastUpdate = 0;
 unsigned long lastBatteryUpdate = 0;
 unsigned long lastNVSSave = 0;
+unsigned long lastLoopTime = 0;  // For non-blocking loop timing
 bool offlineMode = false;
 
 BatteryState batteryState;
 
-void setup() {
-  bootCount++;
+// Adaptive polling: increase interval when battery is low
+unsigned long getAdaptiveUpdateInterval() {
+  if (batteryState.percentage < 20) {
+    return UPDATE_INTERVAL * 2;  // Double interval when battery < 20%
+  }
+  return UPDATE_INTERVAL;
+}
 
-  if(!initDisplay(display)) {
+void setup() {
+  if (!initDisplay(display)) {
     while(1);
   }
 
@@ -103,6 +107,9 @@ void setup() {
     displayDisabled = rtcDisplayDisabled;
   }
 
+  // Reset display cache on boot
+  resetDisplayCache();
+
   offlineMode = true;
   getOfflineDepartures(tram7Departures, tram7Count, bus72Departures, bus72Count);
 
@@ -111,7 +118,8 @@ void setup() {
                      showBus72 ? bus72Count : tram7Count, offlineMode, batteryState);
   }
 
-  if (connectWiFi()) {
+  // Skip network operations during offline hours (1:00-4:30 AM)
+  if (!isOfflineHours() && connectWiFi()) {
     // Use configTzTime which sets TZ and syncs NTP together
     configTzTime("CET-1CEST,M3.5.0,M10.5.0/3", "pool.ntp.org");
 
@@ -140,10 +148,18 @@ void setup() {
 
   lastUpdate = millis();
   lastToggle = millis();
+  lastLoopTime = millis();
 }
 
 void loop() {
   unsigned long currentMillis = millis();
+
+  // Non-blocking loop timing - replace delay(100) with millis check
+  if (currentMillis - lastLoopTime < 100) {
+    yield();  // Feed watchdog
+    return;   // Skip this iteration, not enough time has passed
+  }
+  lastLoopTime = currentMillis;
 
   // Check switch state
   // Switch closed (to GND) = LOW = sleep position
@@ -163,20 +179,12 @@ void loop() {
     // Device resets on wake - code never reaches here
   }
 
-  if (currentMillis - lastUpdate >= UPDATE_INTERVAL) {
-    if (WiFi.status() != WL_CONNECTED) {
-      connectWiFi();
-    }
+  // Use adaptive update interval based on battery level
+  unsigned long adaptiveInterval = getAdaptiveUpdateInterval();
 
-    if (fetchDepartures(tram7Departures, tram7Count, bus72Departures, bus72Count)) {
-      offlineMode = false;
-
-      if (!displayDisabled) {
-        displayDepartures(display, showBus72 ? bus72Departures : tram7Departures,
-                         showBus72 ? bus72Count : tram7Count, offlineMode, batteryState);
-      }
-      lastToggle = currentMillis;
-    } else {
+  if (currentMillis - lastUpdate >= adaptiveInterval) {
+    // Skip API calls during offline hours (1:00-4:30 AM - no service)
+    if (isOfflineHours()) {
       offlineMode = true;
       getOfflineDepartures(tram7Departures, tram7Count, bus72Departures, bus72Count);
 
@@ -185,6 +193,29 @@ void loop() {
                          showBus72 ? bus72Count : tram7Count, offlineMode, batteryState);
       }
       lastToggle = currentMillis;
+    } else {
+      if (WiFi.status() != WL_CONNECTED) {
+        connectWiFi();
+      }
+
+      if (fetchDepartures(tram7Departures, tram7Count, bus72Departures, bus72Count)) {
+        offlineMode = false;
+
+        if (!displayDisabled) {
+          displayDepartures(display, showBus72 ? bus72Departures : tram7Departures,
+                           showBus72 ? bus72Count : tram7Count, offlineMode, batteryState);
+        }
+        lastToggle = currentMillis;
+      } else {
+        offlineMode = true;
+        getOfflineDepartures(tram7Departures, tram7Count, bus72Departures, bus72Count);
+
+        if (!displayDisabled) {
+          displayDepartures(display, showBus72 ? bus72Departures : tram7Departures,
+                           showBus72 ? bus72Count : tram7Count, offlineMode, batteryState);
+        }
+        lastToggle = currentMillis;
+      }
     }
 
     lastUpdate = currentMillis;
@@ -204,9 +235,9 @@ void loop() {
     updateBatteryState(batteryState);
     lastBatteryUpdate = currentMillis;
 
+    // Use partial update for battery icon only (more power efficient)
     if (!displayDisabled) {
-      displayDepartures(display, showBus72 ? bus72Departures : tram7Departures,
-                       showBus72 ? bus72Count : tram7Count, offlineMode, batteryState);
+      updateBatteryIcon(display, batteryState);
     }
   }
 
@@ -214,8 +245,4 @@ void loop() {
     saveTimeToNVS(time(nullptr));
     lastNVSSave = currentMillis;
   }
-
-  // Feed watchdog to prevent resets
-  yield();
-  delay(100);
 }

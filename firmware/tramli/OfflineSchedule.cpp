@@ -31,8 +31,10 @@ void getOfflineDepartures(Departure tram7Departures[], int& tram7Count,
       lastTram7Time = entryTimeMinutes;
 
       Departure dep;
-      dep.number = "7";
-      dep.destination = String(tram7Schedule[i].destination);
+      strncpy(dep.number, "7", sizeof(dep.number) - 1);
+      dep.number[sizeof(dep.number) - 1] = '\0';
+      strncpy(dep.destination, tram7Schedule[i].destination, sizeof(dep.destination) - 1);
+      dep.destination[sizeof(dep.destination) - 1] = '\0';
 
       struct tm depTime = *timeinfo;
       depTime.tm_hour = tram7Schedule[i].hour;
@@ -67,8 +69,10 @@ void getOfflineDepartures(Departure tram7Departures[], int& tram7Count,
       lastBus72Time = entryTimeMinutes;
 
       Departure dep;
-      dep.number = "72";
-      dep.destination = String(bus72Schedule[i].destination);
+      strncpy(dep.number, "72", sizeof(dep.number) - 1);
+      dep.number[sizeof(dep.number) - 1] = '\0';
+      strncpy(dep.destination, bus72Schedule[i].destination, sizeof(dep.destination) - 1);
+      dep.destination[sizeof(dep.destination) - 1] = '\0';
 
       struct tm depTime = *timeinfo;
       depTime.tm_hour = bus72Schedule[i].hour;

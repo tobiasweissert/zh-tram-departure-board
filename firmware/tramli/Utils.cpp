@@ -1,6 +1,7 @@
 #include "Utils.h"
 #include "Config.h"
 #include <Preferences.h>
+#include <string.h>
 
 Preferences preferences;
 
@@ -8,48 +9,48 @@ unsigned long getCurrentTimestamp() {
   return time(nullptr);
 }
 
-String getCurrentTimeString() {
+void getCurrentTimeString(char* buffer, size_t bufferSize) {
   time_t now = time(nullptr);
   struct tm* timeinfo = localtime(&now);
-
-  char buffer[6];
-  strftime(buffer, sizeof(buffer), "%H:%M", timeinfo);
-  return String(buffer);
+  strftime(buffer, bufferSize, "%H:%M", timeinfo);
 }
 
-String convertUmlauts(String text) {
-  // Pre-allocate buffer to avoid heap fragmentation
-  char buffer[64];
+void convertUmlauts(char* text, size_t bufferSize) {
+  // Work in-place by using a temporary buffer
+  char temp[64];
   int bufIdx = 0;
-  int textLen = text.length();
+  int textLen = strlen(text);
 
   // Prevent buffer overflow
   if (textLen > 63) textLen = 63;
 
   for (int i = 0; i < textLen && bufIdx < 63; i++) {
-    unsigned char c = text[i];
+    unsigned char c = (unsigned char)text[i];
 
     if (c == 0xC3 && i + 1 < textLen) {
-      unsigned char next = text[i + 1];
+      unsigned char next = (unsigned char)text[i + 1];
       i++;
 
       switch (next) {
-        case 0xA4: buffer[bufIdx++] = (char)132; break;
-        case 0xB6: buffer[bufIdx++] = (char)148; break;
-        case 0xBC: buffer[bufIdx++] = (char)129; break;
-        case 0x84: buffer[bufIdx++] = (char)142; break;
-        case 0x96: buffer[bufIdx++] = (char)153; break;
-        case 0x9C: buffer[bufIdx++] = (char)154; break;
-        case 0x9F: buffer[bufIdx++] = (char)225; break;
-        default: buffer[bufIdx++] = '?'; break;
+        case 0xA4: temp[bufIdx++] = (char)132; break;  // ä
+        case 0xB6: temp[bufIdx++] = (char)148; break;  // ö
+        case 0xBC: temp[bufIdx++] = (char)129; break;  // ü
+        case 0x84: temp[bufIdx++] = (char)142; break;  // Ä
+        case 0x96: temp[bufIdx++] = (char)153; break;  // Ö
+        case 0x9C: temp[bufIdx++] = (char)154; break;  // Ü
+        case 0x9F: temp[bufIdx++] = (char)225; break;  // ß
+        default: temp[bufIdx++] = '?'; break;
       }
     } else {
-      buffer[bufIdx++] = (char)c;
+      temp[bufIdx++] = (char)c;
     }
   }
 
-  buffer[bufIdx] = '\0';
-  return String(buffer);
+  temp[bufIdx] = '\0';
+
+  // Copy result back to original buffer
+  strncpy(text, temp, bufferSize - 1);
+  text[bufferSize - 1] = '\0';
 }
 
 void initNVS() {

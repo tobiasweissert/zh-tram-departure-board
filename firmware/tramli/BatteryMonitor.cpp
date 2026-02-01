@@ -7,12 +7,13 @@ void initBattery() {
 }
 
 void updateBatteryState(BatteryState& state) {
+  // Use 4 samples without blocking delays for power efficiency
+  // The ADC settles fast enough that delays aren't necessary
   long sum = 0;
-  for (int i = 0; i < 16; i++) {
+  for (int i = 0; i < 4; i++) {
     sum += analogReadMilliVolts(BATTERY_ADC_PIN);
-    delay(1);
   }
-  int avgMilliVolts = sum / 16;
+  int avgMilliVolts = sum / 4;
 
   // Multiply by 2 because of voltage divider
   float voltage = (avgMilliVolts / 1000.0) * 2.0;

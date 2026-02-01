@@ -2,6 +2,24 @@
 #include "Config.h"
 #include "Icons.h"
 #include "Utils.h"
+#include <string.h>
+
+// Cached state for partial updates
+static int cachedBatteryPercentage = -1;
+static char cachedTimeStr[6] = "";
+
+// Display positions for partial updates
+static const int BATTERY_ICON_X = 104;
+static const int BATTERY_ICON_Y = 1;
+static const int TIME_X = 100;
+
+const unsigned char* getBatteryIcon(int percentage) {
+  if (percentage >= 87) return batteryFullIcon;
+  if (percentage >= 62) return battery75Icon;
+  if (percentage >= 37) return battery50Icon;
+  if (percentage >= 12) return battery25Icon;
+  return batteryEmptyIcon;
+}
 
 bool initDisplay(Adafruit_SSD1306& display) {
   if (!display.begin(SSD1306_SWITCHCAPVCC)) {
@@ -27,26 +45,13 @@ void displayDepartures(Adafruit_SSD1306& display,
   display.setCursor(0, 0);
   display.print("Morgental");
 
-  String timeStr = getCurrentTimeString();
+  char timeStr[6];
+  getCurrentTimeString(timeStr, sizeof(timeStr));
   display.getTextBounds(timeStr, 0, 0, &x1, &y1, &w, &h);
 
   int timeX = SCREEN_WIDTH - w;
-
-  // Battery icon (8x5 pixels)
   int batteryX = timeX - 10;
-  const unsigned char* batteryIcon;
-  if (batteryState.percentage >= 87) {
-    batteryIcon = batteryFullIcon;
-  } else if (batteryState.percentage >= 62) {
-    batteryIcon = battery75Icon;
-  } else if (batteryState.percentage >= 37) {
-    batteryIcon = battery50Icon;
-  } else if (batteryState.percentage >= 12) {
-    batteryIcon = battery25Icon;
-  } else {
-    batteryIcon = batteryEmptyIcon;
-  }
-  display.drawBitmap(batteryX, 1, batteryIcon, 8, 5, SSD1306_WHITE);
+  display.drawBitmap(batteryX, 1, getBatteryIcon(batteryState.percentage), 8, 5, SSD1306_WHITE);
 
   display.setCursor(timeX, 0);
   display.print(timeStr);
@@ -67,16 +72,14 @@ void displayDepartures(Adafruit_SSD1306& display,
     for (int i = 0; i < currentCount && i < 5; i++) {
       int yPos = 12 + (i * 10);
 
-      // Pre-allocate buffer to reduce String allocations
       char destBuffer[32];
-      strncpy(destBuffer, currentDepartures[i].destination.c_str(), 31);
-      destBuffer[31] = '\0';
+      strncpy(destBuffer, currentDepartures[i].destination, sizeof(destBuffer) - 1);
+      destBuffer[sizeof(destBuffer) - 1] = '\0';
 
-      // Replace ", " with " " manually
+      // Replace ", " with " "
       for (int j = 0; destBuffer[j] != '\0'; j++) {
         if (destBuffer[j] == ',' && destBuffer[j+1] == ' ') {
           destBuffer[j] = ' ';
-          // Shift rest of string left
           int k = j + 1;
           while (destBuffer[k] != '\0') {
             destBuffer[k] = destBuffer[k + 1];
@@ -85,30 +88,28 @@ void displayDepartures(Adafruit_SSD1306& display,
         }
       }
 
-      // Truncate to 14 chars
       if (strlen(destBuffer) > 14) {
         destBuffer[14] = '\0';
       }
 
-      // Build display text: "number dest"
       char displayBuffer[48];
       snprintf(displayBuffer, sizeof(displayBuffer), "%s %s",
-               currentDepartures[i].number.c_str(), destBuffer);
-
-      String displayText = convertUmlauts(String(displayBuffer));
+               currentDepartures[i].number, destBuffer);
+      convertUmlauts(displayBuffer, sizeof(displayBuffer));
 
       display.setCursor(0, yPos);
-      display.print(displayText);
+      display.print(displayBuffer);
 
       long secondsUntil = currentDepartures[i].departureTimestamp - currentTime;
       int minutesUntil = secondsUntil / 60;
+      char minStr[8];
 
       if (minutesUntil <= 0) {
         display.setCursor(SCREEN_WIDTH - 26, yPos);
         display.print("-");
         display.drawBitmap(SCREEN_WIDTH - 10, yPos, busFrontIcon, 8, 8, SSD1306_WHITE);
       } else if (minutesUntil < 5) {
-        String minStr = String(minutesUntil);
+        snprintf(minStr, sizeof(minStr), "%d", minutesUntil);
         display.getTextBounds(minStr, 0, 0, &x1, &y1, &w, &h);
         display.setCursor(SCREEN_WIDTH - 26, yPos);
         display.print("-");
@@ -116,14 +117,14 @@ void displayDepartures(Adafruit_SSD1306& display,
         display.print(minStr);
         display.drawFastVLine(SCREEN_WIDTH - 2, yPos, 3, SSD1306_WHITE);
       } else if (minutesUntil < 10) {
-        String minStr = String(minutesUntil);
+        snprintf(minStr, sizeof(minStr), "%d", minutesUntil);
         display.getTextBounds(minStr, 0, 0, &x1, &y1, &w, &h);
         display.drawBitmap(SCREEN_WIDTH - 26, yPos, runningManIcon, 8, 8, SSD1306_WHITE);
         display.setCursor(SCREEN_WIDTH - w - 3, yPos);
         display.print(minStr);
         display.drawFastVLine(SCREEN_WIDTH - 2, yPos, 3, SSD1306_WHITE);
       } else {
-        String minStr = String(minutesUntil);
+        snprintf(minStr, sizeof(minStr), "%d", minutesUntil);
         display.getTextBounds(minStr, 0, 0, &x1, &y1, &w, &h);
         display.setCursor(SCREEN_WIDTH - w - 3, yPos);
         display.print(minStr);
@@ -133,4 +134,40 @@ void displayDepartures(Adafruit_SSD1306& display,
   }
 
   display.display();
+}
+
+bool updateBatteryIcon(Adafruit_SSD1306& display, const BatteryState& batteryState) {
+  const unsigned char* newIcon = getBatteryIcon(batteryState.percentage);
+  const unsigned char* oldIcon = getBatteryIcon(cachedBatteryPercentage);
+
+  if (newIcon == oldIcon && cachedBatteryPercentage >= 0) {
+    return false;
+  }
+
+  cachedBatteryPercentage = batteryState.percentage;
+  display.fillRect(BATTERY_ICON_X, BATTERY_ICON_Y, 8, 5, SSD1306_BLACK);
+  display.drawBitmap(BATTERY_ICON_X, BATTERY_ICON_Y, newIcon, 8, 5, SSD1306_WHITE);
+  display.display();
+  return true;
+}
+
+bool updateTimeDisplay(Adafruit_SSD1306& display) {
+  char newTimeStr[6];
+  getCurrentTimeString(newTimeStr, sizeof(newTimeStr));
+
+  if (strcmp(newTimeStr, cachedTimeStr) == 0) {
+    return false;
+  }
+
+  strncpy(cachedTimeStr, newTimeStr, sizeof(cachedTimeStr));
+  display.fillRect(TIME_X, 0, 28, 8, SSD1306_BLACK);
+  display.setCursor(TIME_X, 0);
+  display.print(newTimeStr);
+  display.display();
+  return true;
+}
+
+void resetDisplayCache() {
+  cachedBatteryPercentage = -1;
+  cachedTimeStr[0] = '\0';
 }
