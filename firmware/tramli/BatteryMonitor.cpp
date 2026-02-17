@@ -18,7 +18,6 @@ void updateBatteryState(BatteryState& state) {
   // Multiply by 2 because of voltage divider
   float voltage = (avgMilliVolts / 1000.0) * 2.0;
 
-  state.rawAdc = avgMilliVolts;
   state.voltage = voltage;
 
   if (voltage > 4.2) voltage = 4.2;

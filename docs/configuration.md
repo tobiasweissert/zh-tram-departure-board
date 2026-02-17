@@ -11,46 +11,49 @@ static const char* WIFI_PASSWORD = "YourPassword";
 
 ## Changing Stations
 
-### 1. Update the API URL
+### 1. Update Station and Line Settings
 
-Find your station at [transport.opendata.ch](https://transport.opendata.ch) and update:
-
-```cpp
-static const char* API_URL = "http://transport.opendata.ch/v1/stationboard?station=YOUR_STATION&limit=40";
-```
-
-Use the exact station name as shown in the API (e.g., "Zurich, Bellevue").
-
-### 2. Modify Line Filtering
-
-Edit `firmware/tramli/NetworkManager.cpp` to filter for your lines:
+In your `Config.h`, set your station and which tram/bus lines to display. The display toggles between tram and bus departures:
 
 ```cpp
-// Current code filters for Tram 7 and Bus 72
-// Change these conditions for your lines:
-if (dep.number == "72") {
-    // Bus 72 logic
-}
-else if (dep.number == "7" &&
-         dep.destination.indexOf("Wollishoferplatz") < 0) {
-    // Tram 7 logic - excludes wrong direction
-}
+// Station configuration
+#define STATION_DISPLAY_NAME "Paradeplatz"
+#define STATION_API_NAME "Zurich,Paradeplatz"
+
+// Tram line
+#define TRAM_LINE_NUMBER "2"
+#define TRAM_EXCLUDE_DESTINATION ""  // e.g. "Farbhof" to filter out a direction
+
+// Bus line
+#define BUS_LINE_NUMBER "8"
+#define BUS_EXCLUDE_DESTINATION ""
 ```
 
-### 3. Update Offline Schedules
+Find your station name at [transport.opendata.ch](https://transport.opendata.ch). Use the exact station name as shown in the API (e.g., `"Zurich,Bellevue"`).
+
+To exclude a specific direction, set the exclude destination (e.g., `"Paradeplatz"` to filter out departures heading that way).
+
+### 2. Update Offline Schedules
 
 For offline mode fallback:
 
-1. Edit `tools/generate_schedules.py`:
-   - Change `STATION_NAME` to your station
-   - Change `ROUTE_NUMBERS` to your lines
+1. Create `tools/config.local.py` (copy from `config.example.py`):
+   ```python
+   STATION_NAME = "Paradeplatz"
+   STATION_CITY = "Zürich"
+   TRAM_ROUTE = "2"
+   BUS_ROUTE = "8"
+   TRAM_EXCLUDE_DESTINATION = ""
+   BUS_EXCLUDE_DESTINATION = ""
+   ```
 
 2. Run the generator:
    ```bash
    cd tools
    python3 generate_schedules.py
-   mv ScheduleData.h ../firmware/tramli/data/
    ```
+
+This generates `firmware/tramli/ScheduleData.h` with real departure times from GTFS data.
 
 ## Pin Configuration
 

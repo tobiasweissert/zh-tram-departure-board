@@ -35,13 +35,13 @@ void enterDeepSleep() {
 }
 
 extern RTC_DATA_ATTR time_t rtcLastTimestamp;
-extern RTC_DATA_ATTR bool rtcShowBus72;
+extern RTC_DATA_ATTR bool rtcShowBus;
 
-void saveStateBeforeSleep(bool currentShowBus72) {
+void saveStateBeforeSleep(bool currentShowBus) {
   rtcLastTimestamp = time(nullptr);
-  rtcShowBus72 = currentShowBus72;
+  rtcShowBus = currentShowBus;
 }
 
-void restoreStateAfterWake(bool& showBus72) {
-  showBus72 = rtcShowBus72;
+void restoreStateAfterWake(bool& showBus) {
+  showBus = rtcShowBus;
 }

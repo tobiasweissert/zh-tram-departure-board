@@ -54,5 +54,5 @@ If using battery power:
 ## Testing
 
 1. Power on the device
-2. The display should show "Morgental" and attempt WiFi connection
+2. The display should show your station name and attempt WiFi connection
 3. Toggle switch to test sleep/wake functionality

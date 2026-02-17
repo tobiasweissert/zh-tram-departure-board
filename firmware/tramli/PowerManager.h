@@ -8,7 +8,7 @@
 void displayOff(Adafruit_SSD1306& display);
 void displayOn(Adafruit_SSD1306& display);
 void enterDeepSleep();
-void saveStateBeforeSleep(bool currentShowBus72);
-void restoreStateAfterWake(bool& showBus72);
+void saveStateBeforeSleep(bool currentShowBus);
+void restoreStateAfterWake(bool& showBus);
 
 #endif

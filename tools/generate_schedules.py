@@ -2,12 +2,14 @@
 """
 Generate ScheduleData.h from GTFS data for ESP32-C6 offline mode.
 
-Downloads GTFS feed from opentransportdata.swiss and extracts schedules for:
-- Tram 7 (all trips except to Wollishoferplatz)
-- Bus 72 (all trips)
-at Zürich, Morgental station.
+Downloads GTFS feed from opentransportdata.swiss and extracts schedules for
+two configurable lines (tram + bus) at a configurable station.
 
 Output: Human-readable ScheduleData.h file
+
+Configuration:
+  Default values below use Paradeplatz (Tram 2 + Tram 8) as an example.
+  To override for your station, create tools/config.local.py (see config.example.py).
 """
 
 import csv
@@ -19,14 +21,20 @@ import urllib.request
 from collections import defaultdict
 from datetime import datetime
 
-# Configuration
+# Default configuration (Paradeplatz example)
 GTFS_URL = "https://data.opentransportdata.swiss/dataset/6cca1dfb-e53d-4da8-8d49-4797b3e768e3/resource/d5d9aac1-8251-4dda-9537-ae97cbb810c6/download/gtfs_fp2025_20251211.zip"
-STATION_NAME = "Morgental"
+STATION_NAME = "Paradeplatz"
 STATION_CITY = "Zürich"
-TRAM_7_ROUTE = "7"
-BUS_72_ROUTE = "72"
-EXCLUDE_DESTINATION = "Wollishoferplatz"
+TRAM_ROUTE = "2"
+BUS_ROUTE = "8"
+TRAM_EXCLUDE_DESTINATION = ""
+BUS_EXCLUDE_DESTINATION = ""
 OUTPUT_FILE = "../firmware/tramli/ScheduleData.h"
+
+# Override defaults with local config if it exists
+_config_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.local.py")
+if os.path.exists(_config_path):
+    exec(open(_config_path).read())
 
 def download_gtfs(url, output_path="gtfs.zip"):
     """Download GTFS feed from URL."""
@@ -71,7 +79,7 @@ def load_gtfs_data(gtfs_dir):
     with open(os.path.join(gtfs_dir, 'routes.txt'), 'r', encoding='utf-8-sig') as f:
         reader = csv.DictReader(f)
         for row in reader:
-            if row['route_short_name'] in [TRAM_7_ROUTE, BUS_72_ROUTE]:
+            if row['route_short_name'] in [TRAM_ROUTE, BUS_ROUTE]:
                 routes[row['route_id']] = row
 
     print(f"Found {len(routes)} matching routes")
@@ -82,13 +90,26 @@ def load_gtfs_data(gtfs_dir):
         reader = csv.DictReader(f)
         for row in reader:
             if row['route_id'] in routes:
-                # Filter out Tram 7 to Wollishoferplatz
-                if routes[row['route_id']]['route_short_name'] == TRAM_7_ROUTE:
-                    if EXCLUDE_DESTINATION in row.get('trip_headsign', ''):
+                route_name = routes[row['route_id']]['route_short_name']
+                headsign = row.get('trip_headsign', '')
+
+                # Apply exclusion filters
+                if route_name == TRAM_ROUTE and TRAM_EXCLUDE_DESTINATION:
+                    if TRAM_EXCLUDE_DESTINATION in headsign:
                         continue
+                if route_name == BUS_ROUTE and BUS_EXCLUDE_DESTINATION:
+                    if BUS_EXCLUDE_DESTINATION in headsign:
+                        continue
+
                 trips[row['trip_id']] = row
 
-    print(f"Found {len(trips)} matching trips (excluding Tram 7 to {EXCLUDE_DESTINATION})")
+    excluded = []
+    if TRAM_EXCLUDE_DESTINATION:
+        excluded.append(f"Tram {TRAM_ROUTE} to {TRAM_EXCLUDE_DESTINATION}")
+    if BUS_EXCLUDE_DESTINATION:
+        excluded.append(f"Bus {BUS_ROUTE} to {BUS_EXCLUDE_DESTINATION}")
+    excl_msg = f" (excluding {', '.join(excluded)})" if excluded else ""
+    print(f"Found {len(trips)} matching trips{excl_msg}")
 
     # Load stop_times for our station
     stop_times = defaultdict(list)
@@ -220,7 +241,7 @@ def format_day_mask(mask):
     else:
         return f"0x{mask:02X}"
 
-def write_header_file(tram7_schedule, bus72_schedule, output_path):
+def write_header_file(tram_schedule, bus_schedule, output_path):
     """Write schedule to .h file."""
     print(f"\nWriting schedule to {output_path}...")
 
@@ -246,31 +267,33 @@ struct ScheduleTime {
 
 """)
 
-        # Write Tram 7 schedule
-        f.write("// Tram 7 Schedule (to Stettbach only, excluding Wollishoferplatz)\n")
-        f.write(f"// Generated from GTFS data: {len(tram7_schedule['departures'])} departure times\n")
-        f.write("const ScheduleTime tram7Schedule[] = {\n")
+        # Write tram schedule
+        excl = f", excluding {TRAM_EXCLUDE_DESTINATION}" if TRAM_EXCLUDE_DESTINATION else ""
+        f.write(f"// Tram {TRAM_ROUTE} Schedule from {STATION_NAME}{excl}\n")
+        f.write(f"// Generated from GTFS data: {len(tram_schedule['departures'])} departure times\n")
+        f.write("const ScheduleTime tramSchedule[] = {\n")
 
-        for dep in tram7_schedule['departures']:
+        for dep in tram_schedule['departures']:
             mask_str = format_day_mask(dep['day_mask'])
             dest = dep['destination'].replace('"', '\\"')  # Escape quotes
             f.write(f"  {{{dep['hour']:2d}, {dep['minute']:2d}, {mask_str}, \"{dest}\"}},\n")
 
         f.write("};\n\n")
-        f.write(f"const int tram7ScheduleSize = {len(tram7_schedule['departures'])};\n\n")
+        f.write(f"const int tramScheduleSize = {len(tram_schedule['departures'])};\n\n")
 
-        # Write Bus 72 schedule
-        f.write("// Bus 72 Schedule (all directions from Morgental)\n")
-        f.write(f"// Generated from GTFS data: {len(bus72_schedule['departures'])} departure times\n")
-        f.write("const ScheduleTime bus72Schedule[] = {\n")
+        # Write bus schedule
+        excl = f", excluding {BUS_EXCLUDE_DESTINATION}" if BUS_EXCLUDE_DESTINATION else ""
+        f.write(f"// Bus {BUS_ROUTE} Schedule from {STATION_NAME}{excl}\n")
+        f.write(f"// Generated from GTFS data: {len(bus_schedule['departures'])} departure times\n")
+        f.write("const ScheduleTime busSchedule[] = {\n")
 
-        for dep in bus72_schedule['departures']:
+        for dep in bus_schedule['departures']:
             mask_str = format_day_mask(dep['day_mask'])
             dest = dep['destination'].replace('"', '\\"')  # Escape quotes
             f.write(f"  {{{dep['hour']:2d}, {dep['minute']:2d}, {mask_str}, \"{dest}\"}},\n")
 
         f.write("};\n\n")
-        f.write(f"const int bus72ScheduleSize = {len(bus72_schedule['departures'])};\n\n")
+        f.write(f"const int busScheduleSize = {len(bus_schedule['departures'])};\n\n")
 
         # Write helper function
         f.write("""// Helper function to check if schedule applies to current day
@@ -306,7 +329,8 @@ def main():
     """Main function."""
     print("=" * 70)
     print("GTFS Schedule Generator for ESP32-C6 Offline Mode")
-    print("Generates human-readable ScheduleData.h from GTFS feed")
+    print(f"Station: {STATION_CITY}, {STATION_NAME}")
+    print(f"Tram: {TRAM_ROUTE}, Bus: {BUS_ROUTE}")
     print("=" * 70)
 
     # Check if we should download or use existing GTFS data
@@ -332,20 +356,20 @@ def main():
         return
 
     # Generate schedules
-    tram7_schedule = build_schedule(gtfs_data, TRAM_7_ROUTE)
-    bus72_schedule = build_schedule(gtfs_data, BUS_72_ROUTE)
+    tram_schedule = build_schedule(gtfs_data, TRAM_ROUTE)
+    bus_schedule = build_schedule(gtfs_data, BUS_ROUTE)
 
     # Write header file
-    write_header_file(tram7_schedule, bus72_schedule, OUTPUT_FILE)
+    write_header_file(tram_schedule, bus_schedule, OUTPUT_FILE)
 
     # Cleanup temporary files
     cleanup_files()
 
     print("\n" + "=" * 70)
     print("Schedule generation complete!")
-    print(f"✓ Output file: {OUTPUT_FILE}")
-    print(f"✓ Tram 7: {len(tram7_schedule['departures'])} departure times")
-    print(f"✓ Bus 72: {len(bus72_schedule['departures'])} departure times")
+    print(f"  Output file: {OUTPUT_FILE}")
+    print(f"  Tram {TRAM_ROUTE}: {len(tram_schedule['departures'])} departure times")
+    print(f"  Bus {BUS_ROUTE}: {len(bus_schedule['departures'])} departure times")
     print("\nNext steps:")
     print("1. Review ScheduleData.h for accuracy")
     print("2. Compile and upload tramli.ino to ESP32-C6")

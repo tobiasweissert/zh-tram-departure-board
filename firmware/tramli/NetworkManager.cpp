@@ -44,8 +44,8 @@ bool connectWiFi() {
   return (WiFi.status() == WL_CONNECTED);
 }
 
-bool fetchDepartures(Departure tram7Departures[], int& tram7Count,
-                     Departure bus72Departures[], int& bus72Count,
+bool fetchDepartures(Departure tramDepartures[], int& tramCount,
+                     Departure busDepartures[], int& busCount,
                      bool forceRefresh) {
   if (WiFi.status() != WL_CONNECTED) {
     return false;
@@ -65,9 +65,8 @@ bool fetchDepartures(Departure tram7Departures[], int& tram7Count,
 
   if (httpCode == HTTP_CODE_OK) {
     String payload = http.getString();
-    bool result = parseDepartures(payload, tram7Departures, tram7Count,
-                                   bus72Departures, bus72Count);
-    payload = "";
+    bool result = parseDepartures(payload, tramDepartures, tramCount,
+                                   busDepartures, busCount);
     http.end();
 
     if (result) {
@@ -80,8 +79,8 @@ bool fetchDepartures(Departure tram7Departures[], int& tram7Count,
   }
 }
 
-bool parseDepartures(String json, Departure tram7Departures[], int& tram7Count,
-                     Departure bus72Departures[], int& bus72Count) {
+bool parseDepartures(String json, Departure tramDepartures[], int& tramCount,
+                     Departure busDepartures[], int& busCount) {
   StaticJsonDocument<8192> doc;
   DeserializationError error = deserializeJson(doc, json);
 
@@ -94,8 +93,8 @@ bool parseDepartures(String json, Departure tram7Departures[], int& tram7Count,
   }
 
   JsonArray stationboard = doc["stationboard"].as<JsonArray>();
-  bus72Count = 0;
-  tram7Count = 0;
+  tramCount = 0;
+  busCount = 0;
   unsigned long currentTime = getCurrentTimestamp();
 
   for (JsonObject item : stationboard) {
@@ -115,22 +114,31 @@ bool parseDepartures(String json, Departure tram7Departures[], int& tram7Count,
       continue;
     }
 
-    if (strcmp(dep.number, "72") == 0) {
-      if (bus72Count < 5) {
-        bus72Departures[bus72Count] = dep;
-        bus72Count++;
+    if (strcmp(dep.number, TRAM_LINE_NUMBER) == 0) {
+      // Apply exclusion filter if configured
+      if (TRAM_EXCLUDE_DESTINATION[0] != '\0' &&
+          strstr(dep.destination, TRAM_EXCLUDE_DESTINATION) != nullptr) {
+        continue;
+      }
+      if (tramCount < 5) {
+        tramDepartures[tramCount] = dep;
+        tramCount++;
       }
     }
-    else if (strcmp(dep.number, "7") == 0 &&
-             strstr(dep.destination, "Wollishoferplatz") == nullptr) {
-      if (tram7Count < 5) {
-        tram7Departures[tram7Count] = dep;
-        tram7Count++;
+    else if (strcmp(dep.number, BUS_LINE_NUMBER) == 0) {
+      // Apply exclusion filter if configured
+      if (BUS_EXCLUDE_DESTINATION[0] != '\0' &&
+          strstr(dep.destination, BUS_EXCLUDE_DESTINATION) != nullptr) {
+        continue;
+      }
+      if (busCount < 5) {
+        busDepartures[busCount] = dep;
+        busCount++;
       }
     }
   }
 
-  return (bus72Count > 0 || tram7Count > 0);
+  return (tramCount > 0 || busCount > 0);
 }
 
 bool isOfflineHours() {

@@ -17,19 +17,19 @@
 
 // RTC Memory Variables (persist across deep sleep)
 RTC_DATA_ATTR time_t rtcLastTimestamp = 0;
-RTC_DATA_ATTR bool rtcShowBus72 = true;
+RTC_DATA_ATTR bool rtcShowBus = true;
 RTC_DATA_ATTR bool rtcDisplayDisabled = false;
 
 // Global Variables
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, OLED_MOSI, OLED_CLK,
                          OLED_DC, OLED_RESET, OLED_CS);
 
-Departure bus72Departures[5];
-Departure tram7Departures[5];
-int bus72Count = 0;
-int tram7Count = 0;
+Departure tramDepartures[5];
+Departure busDepartures[5];
+int tramCount = 0;
+int busCount = 0;
 
-bool showBus72 = true;
+bool showBus = true;
 bool displayDisabled = false;
 unsigned long lastToggle = 0;
 unsigned long lastUpdate = 0;
@@ -39,6 +39,13 @@ unsigned long lastLoopTime = 0;  // For non-blocking loop timing
 bool offlineMode = false;
 
 BatteryState batteryState;
+
+void refreshDisplay() {
+  if (!displayDisabled) {
+    displayDepartures(display, showBus ? busDepartures : tramDepartures,
+                     showBus ? busCount : tramCount, offlineMode, batteryState);
+  }
+}
 
 // Adaptive polling: increase interval when battery is low
 unsigned long getAdaptiveUpdateInterval() {
@@ -95,7 +102,7 @@ void setup() {
     settimeofday(&tv, NULL);
   }
 
-  restoreStateAfterWake(showBus72);
+  restoreStateAfterWake(showBus);
 
   // Check if we woke from sleep via toggle switch
   esp_sleep_wakeup_cause_t wakeupCause = esp_sleep_get_wakeup_cause();
@@ -111,12 +118,9 @@ void setup() {
   resetDisplayCache();
 
   offlineMode = true;
-  getOfflineDepartures(tram7Departures, tram7Count, bus72Departures, bus72Count);
+  getOfflineDepartures(tramDepartures, tramCount, busDepartures, busCount);
 
-  if (!displayDisabled) {
-    displayDepartures(display, showBus72 ? bus72Departures : tram7Departures,
-                     showBus72 ? bus72Count : tram7Count, offlineMode, batteryState);
-  }
+  refreshDisplay();
 
   // Skip network operations during offline hours (1:00-4:30 AM)
   if (!isOfflineHours() && connectWiFi()) {
@@ -136,13 +140,9 @@ void setup() {
       }
     }
 
-    if (fetchDepartures(tram7Departures, tram7Count, bus72Departures, bus72Count)) {
+    if (fetchDepartures(tramDepartures, tramCount, busDepartures, busCount)) {
       offlineMode = false;
-
-      if (!displayDisabled) {
-        displayDepartures(display, showBus72 ? bus72Departures : tram7Departures,
-                         showBus72 ? bus72Count : tram7Count, offlineMode, batteryState);
-      }
+      refreshDisplay();
     }
   }
 
@@ -169,7 +169,7 @@ void loop() {
   if (switchInSleepPosition && !displayDisabled) {
     displayDisabled = true;
     rtcDisplayDisabled = true;
-    saveStateBeforeSleep(showBus72);
+    saveStateBeforeSleep(showBus);
     saveTimeToNVS(time(nullptr));
     displayOff(display);
     WiFi.disconnect(true);
@@ -186,48 +186,29 @@ void loop() {
     // Skip API calls during offline hours (1:00-4:30 AM - no service)
     if (isOfflineHours()) {
       offlineMode = true;
-      getOfflineDepartures(tram7Departures, tram7Count, bus72Departures, bus72Count);
-
-      if (!displayDisabled) {
-        displayDepartures(display, showBus72 ? bus72Departures : tram7Departures,
-                         showBus72 ? bus72Count : tram7Count, offlineMode, batteryState);
-      }
-      lastToggle = currentMillis;
+      getOfflineDepartures(tramDepartures, tramCount, busDepartures, busCount);
     } else {
       if (WiFi.status() != WL_CONNECTED) {
         connectWiFi();
       }
 
-      if (fetchDepartures(tram7Departures, tram7Count, bus72Departures, bus72Count)) {
+      if (fetchDepartures(tramDepartures, tramCount, busDepartures, busCount)) {
         offlineMode = false;
-
-        if (!displayDisabled) {
-          displayDepartures(display, showBus72 ? bus72Departures : tram7Departures,
-                           showBus72 ? bus72Count : tram7Count, offlineMode, batteryState);
-        }
-        lastToggle = currentMillis;
       } else {
         offlineMode = true;
-        getOfflineDepartures(tram7Departures, tram7Count, bus72Departures, bus72Count);
-
-        if (!displayDisabled) {
-          displayDepartures(display, showBus72 ? bus72Departures : tram7Departures,
-                           showBus72 ? bus72Count : tram7Count, offlineMode, batteryState);
-        }
-        lastToggle = currentMillis;
+        getOfflineDepartures(tramDepartures, tramCount, busDepartures, busCount);
       }
     }
+
+    refreshDisplay();
+    lastToggle = currentMillis;
 
     lastUpdate = currentMillis;
   }
 
   if (currentMillis - lastToggle >= TOGGLE_INTERVAL) {
-    showBus72 = !showBus72;
-
-    if (!displayDisabled) {
-      displayDepartures(display, showBus72 ? bus72Departures : tram7Departures,
-                       showBus72 ? bus72Count : tram7Count, offlineMode, batteryState);
-    }
+    showBus = !showBus;
+    refreshDisplay();
     lastToggle = currentMillis;
   }
 

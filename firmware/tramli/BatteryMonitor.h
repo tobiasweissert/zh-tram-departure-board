@@ -7,7 +7,6 @@
 struct BatteryState {
   int percentage;
   float voltage;
-  int rawAdc;
 };
 
 void initBattery();

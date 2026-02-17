@@ -6,12 +6,9 @@
 
 // Cached state for partial updates
 static int cachedBatteryPercentage = -1;
-static char cachedTimeStr[6] = "";
-
 // Display positions for partial updates
 static const int BATTERY_ICON_X = 104;
 static const int BATTERY_ICON_Y = 1;
-static const int TIME_X = 100;
 
 const unsigned char* getBatteryIcon(int percentage) {
   if (percentage >= 87) return batteryFullIcon;
@@ -43,7 +40,7 @@ void displayDepartures(Adafruit_SSD1306& display,
   uint16_t w, h;
 
   display.setCursor(0, 0);
-  display.print("Morgental");
+  display.print(STATION_DISPLAY_NAME);
 
   char timeStr[6];
   getCurrentTimeString(timeStr, sizeof(timeStr));
@@ -116,16 +113,12 @@ void displayDepartures(Adafruit_SSD1306& display,
         display.setCursor(SCREEN_WIDTH - w - 3, yPos);
         display.print(minStr);
         display.drawFastVLine(SCREEN_WIDTH - 2, yPos, 3, SSD1306_WHITE);
-      } else if (minutesUntil < 10) {
-        snprintf(minStr, sizeof(minStr), "%d", minutesUntil);
-        display.getTextBounds(minStr, 0, 0, &x1, &y1, &w, &h);
-        display.drawBitmap(SCREEN_WIDTH - 26, yPos, runningManIcon, 8, 8, SSD1306_WHITE);
-        display.setCursor(SCREEN_WIDTH - w - 3, yPos);
-        display.print(minStr);
-        display.drawFastVLine(SCREEN_WIDTH - 2, yPos, 3, SSD1306_WHITE);
       } else {
         snprintf(minStr, sizeof(minStr), "%d", minutesUntil);
         display.getTextBounds(minStr, 0, 0, &x1, &y1, &w, &h);
+        if (minutesUntil < 10) {
+          display.drawBitmap(SCREEN_WIDTH - 26, yPos, runningManIcon, 8, 8, SSD1306_WHITE);
+        }
         display.setCursor(SCREEN_WIDTH - w - 3, yPos);
         display.print(minStr);
         display.drawFastVLine(SCREEN_WIDTH - 2, yPos, 3, SSD1306_WHITE);
@@ -151,23 +144,6 @@ bool updateBatteryIcon(Adafruit_SSD1306& display, const BatteryState& batterySta
   return true;
 }
 
-bool updateTimeDisplay(Adafruit_SSD1306& display) {
-  char newTimeStr[6];
-  getCurrentTimeString(newTimeStr, sizeof(newTimeStr));
-
-  if (strcmp(newTimeStr, cachedTimeStr) == 0) {
-    return false;
-  }
-
-  strncpy(cachedTimeStr, newTimeStr, sizeof(cachedTimeStr));
-  display.fillRect(TIME_X, 0, 28, 8, SSD1306_BLACK);
-  display.setCursor(TIME_X, 0);
-  display.print(newTimeStr);
-  display.display();
-  return true;
-}
-
 void resetDisplayCache() {
   cachedBatteryPercentage = -1;
-  cachedTimeStr[0] = '\0';
 }
