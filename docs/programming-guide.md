@@ -35,7 +35,7 @@ arduino-cli lib install "Adafruit GFX Library" "Adafruit SSD1306" "ArduinoJson"
 Before building, copy and configure the settings file:
 
 ```bash
-cd firmware/tramli
+cd firmware/zh_tram_departure_board
 cp Config.example.h Config.h
 ```
 
@@ -52,14 +52,14 @@ See [configuration.md](configuration.md) for detailed settings.
 
 ### Arduino IDE
 
-1. Open `firmware/tramli/tramli.ino`
+1. Open `firmware/zh_tram_departure_board/zh_tram_departure_board.ino`
 2. Select **ESP32C6 Dev Module** as the board
 3. Click **Verify** to compile
 
 ### Arduino CLI
 
 ```bash
-arduino-cli compile --fqbn esp32:esp32:esp32c6 firmware/tramli
+arduino-cli compile --fqbn esp32:esp32:esp32c6 firmware/zh_tram_departure_board
 ```
 
 ## Uploading
@@ -77,7 +77,7 @@ arduino-cli compile --fqbn esp32:esp32:esp32c6 firmware/tramli
 arduino-cli board list
 
 # Upload
-arduino-cli upload -p /dev/cu.usbmodem* --fqbn esp32:esp32:esp32c6 firmware/tramli
+arduino-cli upload -p /dev/cu.usbmodem* --fqbn esp32:esp32:esp32c6 firmware/zh_tram_departure_board
 ```
 
 ## Troubleshooting

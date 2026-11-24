@@ -45,6 +45,7 @@ const unsigned long TOGGLE_INTERVAL = 10000;          // Switch display every 10
 const unsigned long BATTERY_UPDATE_INTERVAL = 5000;   // Update battery every 5s
 
 // NVS storage
+// Keep the legacy storage key so existing devices retain their saved state.
 #define NVS_NAMESPACE "tramli"
 #define NVS_SAVE_INTERVAL 60000  // Save time to NVS every 60s
 

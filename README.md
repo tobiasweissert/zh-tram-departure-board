@@ -1,4 +1,4 @@
-# Tramli
+# ZH Tram Departure Board
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Platform: ESP32-C6](https://img.shields.io/badge/Platform-ESP32--C6-blue.svg)](https://www.espressif.com/en/products/socs/esp32-c6)
@@ -6,7 +6,14 @@
 
 A battery-powered departure display for Zurich public transport using an ESP32-C6 and OLED screen.
 
-![Tramli Display](docs/images/display.jpg)
+![ZH Tram Departure Board mounted beside the front door](docs/images/departure-board.jpg)
+
+## In use
+
+![Close-up of the OLED showing Paradeplatz departures](docs/images/departure-display-detail.jpg)
+
+The finished board and a detail crop of its departure display. Photo from
+[my Hackster build article](https://www.hackster.io/supertoub/tram-departure-board-1fcd47).
 
 ## Features
 
@@ -22,9 +29,9 @@ A battery-powered departure display for Zurich public transport using an ESP32-C
 ### 1. Clone and configure
 
 ```bash
-git clone https://github.com/yourusername/tramli.git
-cd tramli/firmware/tramli
-cp Config.example.h Config.h
+git clone https://github.com/tobiasweissert/zh-tram-departure-board.git
+cd zh-tram-departure-board
+cp firmware/zh_tram_departure_board/Config.example.h firmware/zh_tram_departure_board/Config.h
 # Edit Config.h with your WiFi credentials
 ```
 
@@ -38,8 +45,8 @@ arduino-cli lib install "Adafruit GFX Library" "Adafruit SSD1306" "ArduinoJson"
 ### 3. Build and upload
 
 ```bash
-arduino-cli compile --fqbn esp32:esp32:esp32c6 firmware/tramli
-arduino-cli upload -p /dev/cu.usbmodem* --fqbn esp32:esp32:esp32c6 firmware/tramli
+arduino-cli compile --fqbn esp32:esp32:esp32c6 firmware/zh_tram_departure_board
+arduino-cli upload -p /dev/cu.usbmodem* --fqbn esp32:esp32:esp32c6 firmware/zh_tram_departure_board
 ```
 
 ## Hardware
@@ -56,10 +63,10 @@ See [hardware/wiring.md](hardware/wiring.md) for detailed wiring instructions.
 ## Project Structure
 
 ```
-tramli/
+zh-tram-departure-board/
 ├── firmware/
-│   ├── tramli/               # Arduino sketch
-│   │   ├── tramli.ino        # Main program
+│   ├── zh_tram_departure_board/ # Arduino sketch
+│   │   ├── zh_tram_departure_board.ino # Main program
 │   │   ├── Config.h          # Your settings (gitignored)
 │   │   ├── Config.example.h  # Template for Config.h
 │   │   ├── PowerManager.*    # Sleep/wake handling

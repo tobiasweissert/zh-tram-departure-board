@@ -1,6 +1,6 @@
 # Configuration Guide
 
-All configuration is done in `firmware/tramli/Config.h`. Copy from `Config.example.h` to get started.
+All configuration is done in `firmware/zh_tram_departure_board/Config.h`. Copy from `Config.example.h` to get started.
 
 ## WiFi Settings
 
@@ -53,7 +53,7 @@ For offline mode fallback:
    python3 generate_schedules.py
    ```
 
-This generates `firmware/tramli/ScheduleData.h` with real departure times from GTFS data.
+This generates `firmware/zh_tram_departure_board/ScheduleData.h` with real departure times from GTFS data.
 
 ## Pin Configuration
 

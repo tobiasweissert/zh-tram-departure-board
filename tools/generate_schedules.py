@@ -29,7 +29,7 @@ TRAM_ROUTE = "2"
 BUS_ROUTE = "8"
 TRAM_EXCLUDE_DESTINATION = ""
 BUS_EXCLUDE_DESTINATION = ""
-OUTPUT_FILE = "../firmware/tramli/ScheduleData.h"
+OUTPUT_FILE = "../firmware/zh_tram_departure_board/ScheduleData.h"
 
 # Override defaults with local config if it exists
 _config_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.local.py")
@@ -372,7 +372,7 @@ def main():
     print(f"  Bus {BUS_ROUTE}: {len(bus_schedule['departures'])} departure times")
     print("\nNext steps:")
     print("1. Review ScheduleData.h for accuracy")
-    print("2. Compile and upload tramli.ino to ESP32-C6")
+    print("2. Compile and upload zh_tram_departure_board.ino to ESP32-C6")
     print("3. Test offline mode by disconnecting WiFi")
     print("=" * 70)
 

@@ -1,4 +1,4 @@
-# Tramli: A Tiny Battery-Powered Tram Departure Display
+# ZH Tram Departure Board: A Tiny Battery-Powered Tram Departure Display
 
 **Because Swiss trains are on time. I should be too.**
 
@@ -162,7 +162,7 @@ A few things I spent more time on than expected:
 
 ## Adapt It for Your City
 
-If you're in Switzerland, adapting Tramli for your stop is straightforward. Change the `API_URL` in `Config.h` to your station name (find it at transport.opendata.ch), update the line number filtering in `NetworkManager.cpp`, and re-run `generate_schedules.py` with your stop and route numbers.
+If you're in Switzerland, adapting ZH Tram Departure Board for your stop is straightforward. Change the `API_URL` in `Config.h` to your station name (find it at transport.opendata.ch), update the line number filtering in `NetworkManager.cpp`, and re-run `generate_schedules.py` with your stop and route numbers.
 
 Outside Switzerland, the same architecture works with other open transit APIs. Germany (DELFI), the UK (Transport API), the Netherlands (OVapi) -- many countries publish GTFS feeds or have similar real-time APIs. You'd need to adapt the API parsing, but the firmware structure -- live data with offline fallback, power management, urgency display -- is reusable.
 
@@ -170,8 +170,8 @@ The whole project is MIT licensed and open source.
 
 ## Wrapping Up
 
-Tramli sits on my kitchen counter now. I glance at it while making coffee, see that the next tram is in eight minutes, and know exactly when to put on my shoes. No phone, no app, no unlocking anything. Just a number on a tiny screen.
+ZH Tram Departure Board sits on my kitchen counter now. I glance at it while making coffee, see that the next tram is in eight minutes, and know exactly when to put on my shoes. No phone, no app, no unlocking anything. Just a number on a tiny screen.
 
 What I enjoy most about this project is how everything fits together: the hardware, the firmware, the 3D-printed case, the offline fallback, the little pixel art icons. It's a complete thing. Not a breadboard prototype, but something that actually lives in my kitchen and gets used every morning.
 
-The full source code, 3D print files, and wiring guide are on GitHub: [github.com/tramli](https://github.com/yourusername/tramli). MIT license. Build it, remix it, adapt it for your city. If you do, I'd love to see it.
+The full source code, 3D print files, and wiring guide are on GitHub: [github.com/tobiasweissert/zh-tram-departure-board](https://github.com/tobiasweissert/zh-tram-departure-board). MIT license. Build it, remix it, adapt it for your city. If you do, I'd love to see it.

@@ -1,11 +1,11 @@
 # Enclosure
 
-This directory is for 3D printable enclosure files.
+This directory contains the ZH Tram Departure Board enclosure files.
 
-## Planned Files
+## Files
 
-- `enclosure.stl` - Main body
-- `lid.stl` - Cover with display cutout
+- [zh-tram-departure-board.stl](zh-tram-departure-board.stl) - Printable enclosure
+- [zh-tram-departure-board.f3d](zh-tram-departure-board.f3d) - Fusion 360 source
 
 ## Design Requirements
 
